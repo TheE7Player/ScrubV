@@ -41,18 +41,64 @@
             background-color: #7c49b5;
             color: white;
         }
+		.file-drag-drop {
+			width: 400px;
+			height: 250px;
+			margin-top: 25px;
+			border: 1px solid #e8ff70;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			cursor: pointer;
+			position: relative;
+		}
+		.file-overlay {
+			transition: opacity 0.9s, transform 0.3s;
+			color: #535353;
+			font-size: 16px;
+			text-align: center;
+		}	
+		.highlight {
+			transition: box-shadow 0.5s;
+			border: 4px solid #e8ff70;
+			box-shadow: 0 0 20px 9px #909b9b;
+		}
+		.file-overlay:hover {
+			opacity: 1;
+			color: white;
+			transform: scale(1.1);
+		}	
+		.highlight .file-overlay {
+			opacity: 1;
+			color: white;
+			transform: scale(1.1);
+		}
+		#videoInput {
+			width: 0;
+			height: 0;
+			position: absolute;
+		}
     </style>
 </head>
 <body>
-    <h2>ScrubV - Online Video Scrubber</h2>
-    <input type="file" id="videoInput" accept="video/*">
+    <h1 style="margin-bottom: 0px;">ScrubV - Online Video Scrubber</h1>
+   
     <div class="button-container">
 		<label for="frameRateSelect" style="margin-right: 8px;">Frame Rate:</label>
 		<button id="btn15" data-selected="false" onclick="HandleFPSRate(15);">15</button>
 		<button id="btn30" data-selected="true" onclick="HandleFPSRate(30);">30</button>
 		<button id="btn60" data-selected="false" onclick="HandleFPSRate(60);">60</button>
 	</div>
-    <div id="videoContainer" style="display:none; position:relative;">
+	
+	<div class="file-drag-drop"
+		onclick="this.querySelector('#videoInput').click();">
+		<div class="file-overlay">
+			Drop file here or click to browse
+		</div>
+		<input type="file" id="videoInput" accept="video/*" style="display: none;">
+	</div>
+    
+	<div id="videoContainer" style="display:none; position:relative;">
         <canvas id="canvas"></canvas>
         <div id="scrubber"></div>
         <div id="overlay">Buffering...</div>
@@ -62,6 +108,26 @@
 		window.addEventListener('load', function() {
 			console.log("Window is loaded, running remaining code...");
 		
+			// Stop global file drop behaviour (Browser opens file on drop)
+			// Source: https://stackoverflow.com/a/6756680
+			window.addEventListener("dragover",function(e){e = e || event;e.preventDefault();},false);
+			window.addEventListener("drop",function(e){e = e || event;e.preventDefault();},false);
+		
+			document.querySelector('.file-drag-drop').addEventListener('dragover', function(event) {
+				event.preventDefault();
+				this.classList.add('highlight');
+			});
+
+			document.querySelector('.file-drag-drop').addEventListener('dragleave', function() {
+				this.classList.remove('highlight');
+			});
+			
+			document.querySelector('.file-drag-drop').addEventListener('drop', function(event) {
+				event.preventDefault();
+				var file = event.dataTransfer.files[0];
+				beginScrubProcess(file);
+			});
+			
 			// UI logic
 			window.HandleFPSRate = function(fps)
 			{
@@ -100,8 +166,17 @@
 				
 			videoInput.addEventListener('change', function(event) {
 				const file = event.target.files[0];
+				beginScrubProcess(file);
+			});
+			
+			window.beginScrubProcess = function (file)
+			{
 				if (file) {
+					document.querySelector(".file-drag-drop").style.display = 'none';
+					document.querySelector(".file-drag-drop").remove('highlight');
+					
 					frames = [];
+					
 					stopScrubbedAudio();
 					if (audioContext) {
 						audioContext.close();
@@ -115,7 +190,7 @@
 					videoContainer.style.display = 'flex';
 					extractAudio(file);
 				}
-			});
+			}
 
 			function extractFrames() {
 				overlay.style.visibility = 'visible';
