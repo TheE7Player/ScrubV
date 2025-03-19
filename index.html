@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Scrubber</title>
     <style>
-        body { background-color: rgba(28, 28, 30, 255); text-align: center; font-family: Arial, sans-serif; overflow: hidden; color: white; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        body { background-color: rgba(28, 28, 30, 255); text-align: center; font-family: Arial, sans-serif; overflow: auto; color: white; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         #videoContainer { width: 90vw; max-width: 600px; position: relative; display: flex; flex-direction: column; align-items: center; }
-        canvas { display: block; background: black; max-width: 100%; height: auto; }
+        canvas { display: block; background: black; max-width: 100%; height: 90vh; }
         #scrubber { width: 100%; max-width: 600px; height: 40px; background: rgba(0, 0, 0, 0.2); cursor: pointer; border-radius: 10px; position: relative; margin-top: 10px; }
         #frameRateSelect { margin-bottom: 10px; }
         #overlay { 
@@ -78,27 +78,54 @@
 			height: 0;
 			position: absolute;
 		}
+		#MainMenu {
+			display: flex;
+			flex-direction: column;
+			align-content: center;
+			justify-content: center;
+			align-items: center;
+		}
+		#titleBar {
+			background-color: black;
+			width: 100%;
+			display: flex;
+			flex-direction: row;
+			flex-wrap: nowrap;
+			justify-content: center;
+			align-items: center;
+			position: fixed;
+			top: 0;
+			height: 30px;
+		}
     </style>
 </head>
 <body>
-    <h1 style="margin-bottom: 0px;">ScrubV - Online Video Scrubber</h1>
+	<div id="MainMenu">
+		<h1 style="margin-bottom: 0px;">ScrubV - Online Video Scrubber</h1>
    
-    <div class="button-container">
-		<label for="frameRateSelect" style="margin-right: 8px;">Frame Rate:</label>
-		<button id="btn15" data-selected="false" onclick="HandleFPSRate(15);">15</button>
-		<button id="btn30" data-selected="true" onclick="HandleFPSRate(30);">30</button>
-		<button id="btn60" data-selected="false" onclick="HandleFPSRate(60);">60</button>
-	</div>
-	
-	<div class="file-drag-drop"
-		onclick="this.querySelector('#videoInput').click();">
-		<div class="file-overlay">
-			Drop file here or click to browse
+		<div class="button-container">
+			<label for="frameRateSelect" style="margin-right: 8px;">Frame Rate:</label>
+			<button id="btn15" data-selected="false" onclick="HandleFPSRate(15);">15</button>
+			<button id="btn30" data-selected="true" onclick="HandleFPSRate(30);">30</button>
+			<button id="btn60" data-selected="false" onclick="HandleFPSRate(60);">60</button>
 		</div>
-		<input type="file" id="videoInput" accept="video/*" style="display: none;">
+		
+		<div class="file-drag-drop"
+			onclick="this.querySelector('#videoInput').click();">
+			<div class="file-overlay">
+				Drop file here or click to browse
+			</div>
+			<input type="file" id="videoInput" accept="video/*" style="display: none;">
+		</div>
 	</div>
-    
+  
 	<div id="videoContainer" style="display:none; position:relative;">
+		<div id="titleBar">
+			<p id="videoName" style="margin-right: 35px;">Buffering Video... Please Wait</p>
+			<a id="videoReset" style="cursor: pointer;visibility: hidden;" onclick="ResetToMainMenu()">
+				<svg fill="#FFFFFFFF" width="24px" height="24px" viewBox="0 0 1024.00 1024.00" t="1569683368540" class="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="9723" xmlns:xlink="http://www.w3.org/1999/xlink" stroke="#FFFFFFFF"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><defs><style type="text/css"></style></defs><path d="M899.1 869.6l-53-305.6H864c14.4 0 26-11.6 26-26V346c0-14.4-11.6-26-26-26H618V138c0-14.4-11.6-26-26-26H432c-14.4 0-26 11.6-26 26v182H160c-14.4 0-26 11.6-26 26v192c0 14.4 11.6 26 26 26h17.9l-53 305.6c-0.3 1.5-0.4 3-0.4 4.4 0 14.4 11.6 26 26 26h723c1.5 0 3-0.1 4.4-0.4 14.2-2.4 23.7-15.9 21.2-30zM204 390h272V182h72v208h272v104H204V390z m468 440V674c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8v156H416V674c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8v156H202.8l45.1-260H776l45.1 260H672z" p-id="9724"></path></g></svg>
+			</a>	
+		</div>
         <canvas id="canvas"></canvas>
         <div id="scrubber"></div>
         <div id="overlay">Buffering...</div>
@@ -169,12 +196,32 @@
 				beginScrubProcess(file);
 			});
 			
+			window.ResetToMainMenu = function() {
+				frames = [];			
+				stopScrubbedAudio();
+				if (audioContext) {
+					audioContext.close();
+					audioContext = null;
+					
+				}
+				window.CurrentVideoTitle = "";
+				videoContainer.style.display = 'none';
+				document.querySelector("#videoReset").style.visibility = "hidden";
+				document.querySelector("#videoName").innerText = "Buffering Video... Please Wait";
+				document.querySelector("#MainMenu").style.display = 'flex';
+			};
+
+			window.CurrentVideoTitle = "";
 			window.beginScrubProcess = function (file)
 			{
 				if (file) {
-					document.querySelector(".file-drag-drop").style.display = 'none';
-					document.querySelector(".file-drag-drop").remove('highlight');
-					
+					window.CurrentVideoTitle = file.name;
+					console.log(`[beginScrubProcess] Processing file: ${file.name}`)
+
+					// document.querySelector(".file-drag-drop").style.display = 'none';
+					document.querySelector("#MainMenu").style.display = 'none';
+					document.querySelector(".file-drag-drop").classList.remove('highlight');
+				
 					frames = [];
 					
 					stopScrubbedAudio();
@@ -213,6 +260,8 @@
 					}
 					video.style.display = 'none';
 					overlay.style.visibility = 'hidden';
+					document.querySelector("#videoName").innerText = window.CurrentVideoTitle;
+					document.querySelector("#videoReset").style.visibility = "visible";
 				}
 
 				captureAllFrames();
