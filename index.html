@@ -22,17 +22,36 @@
             font-size: 24px; 
             visibility: hidden;
         }
+		.button-container {
+            display: flex;
+            justify-content: space-around;
+			align-items: center;
+            margin-top: 8px;
+        }
+        button {
+            padding: 4px 12px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            background-color: #3b3a3a;
+            color: #999999;
+			transition: background-color 0.3s, color 0.8s;
+        }
+		button[data-selected='true'] {
+            background-color: #7c49b5;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <h2>ScrubV - Online Video Scrubber</h2>
     <input type="file" id="videoInput" accept="video/*">
-    <label for="frameRateSelect">Frame Rate:</label>
-    <select id="frameRateSelect">
-        <option value="15">15 FPS</option>
-        <option value="30" selected>30 FPS</option>
-        <option value="60">60 FPS</option>
-    </select>
+    <div class="button-container">
+		<label for="frameRateSelect" style="margin-right: 8px;">Frame Rate:</label>
+		<button id="btn15" data-selected="false" onclick="HandleFPSRate(15);">15</button>
+		<button id="btn30" data-selected="true" onclick="HandleFPSRate(30);">30</button>
+		<button id="btn60" data-selected="false" onclick="HandleFPSRate(60);">60</button>
+	</div>
     <div id="videoContainer" style="display:none; position:relative;">
         <canvas id="canvas"></canvas>
         <div id="scrubber"></div>
@@ -40,129 +59,151 @@
     </div>
     
     <script>
-        const videoInput = document.getElementById('videoInput');
-        const frameRateSelect = document.getElementById('frameRateSelect');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const videoContainer = document.getElementById('videoContainer');
-        const scrubber = document.getElementById('scrubber');
-        const overlay = document.getElementById('overlay');
-        let video = document.createElement('video');
-        let isScrubbing = false;
-        let targetTime = 0;
-        let frameRate = 30;
-        let frames = [];
-        let audioContext, audioBuffer, audioSource;
+		window.addEventListener('load', function() {
+			console.log("Window is loaded, running remaining code...");
+		
+			// UI logic
+			window.HandleFPSRate = function(fps)
+			{
+				function handle(fpsTarget, element)
+				{
+					if (fps !== fpsTarget)
+					{
+						element.setAttribute('data-selected', 'false'); return;
+					}
+					window.frameRate = fpsTarget;
+					element.setAttribute('data-selected', 'true')
+				}
+				
+				handle(15, document.getElementById("btn15"));
+				handle(30, document.getElementById("btn30"));
+				handle(60, document.getElementById("btn60"));
+			}
+		
+			// Scrub logic below...
+		
+			const videoInput = document.getElementById('videoInput');
+			const frameRateSelect = document.getElementById('frameRateSelect');
+			const canvas = document.getElementById('canvas');
+			const ctx = canvas.getContext('2d');
+			const videoContainer = document.getElementById('videoContainer');
+			const scrubber = document.getElementById('scrubber');
+			const overlay = document.getElementById('overlay');
+			let video = document.createElement('video');
+			let isScrubbing = false;
+			let targetTime = 0;
+			
+			window.frameRate = 30; // Set default to 30FPS
+			
+			let frames = [];
+			let audioContext, audioBuffer, audioSource;
+				
+			videoInput.addEventListener('change', function(event) {
+				const file = event.target.files[0];
+				if (file) {
+					frames = [];
+					stopScrubbedAudio();
+					if (audioContext) {
+						audioContext.close();
+						audioContext = null;
+					}
+					
+					const url = URL.createObjectURL(file);
+					video.src = url;
+					video.preload = "auto";
+					video.onloadeddata = extractFrames;
+					videoContainer.style.display = 'flex';
+					extractAudio(file);
+				}
+			});
 
-        frameRateSelect.addEventListener('change', function() {
-            frameRate = parseInt(this.value);
-        });
+			function extractFrames() {
+				overlay.style.visibility = 'visible';
+				canvas.width = video.videoWidth;
+				canvas.height = video.videoHeight;
+				let duration = video.duration;
+				let totalFrames = Math.floor(duration * window.frameRate);
+				frames = new Array(totalFrames);
 
-        videoInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                frames = [];
-                stopScrubbedAudio();
-                if (audioContext) {
-                    audioContext.close();
-                    audioContext = null;
-                }
-                
-                const url = URL.createObjectURL(file);
-                video.src = url;
-                video.preload = "auto";
-                video.onloadeddata = extractFrames;
-                videoContainer.style.display = 'flex';
-                extractAudio(file);
-            }
-        });
+				async function captureAllFrames() {
+					for (let i = 0; i < totalFrames; i++) {
+						await new Promise((resolve) => {
+							video.currentTime = (i / window.frameRate);
+							video.onseeked = () => {
+								ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+								frames[i] = canvas.toDataURL();
+								resolve();
+							};
+						});
+					}
+					video.style.display = 'none';
+					overlay.style.visibility = 'hidden';
+				}
 
-        function extractFrames() {
-            overlay.style.visibility = 'visible';
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            let duration = video.duration;
-            let totalFrames = Math.floor(duration * frameRate);
-            frames = new Array(totalFrames);
+				captureAllFrames();
+			}
 
-            async function captureAllFrames() {
-                for (let i = 0; i < totalFrames; i++) {
-                    await new Promise((resolve) => {
-                        video.currentTime = (i / frameRate);
-                        video.onseeked = () => {
-                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                            frames[i] = canvas.toDataURL();
-                            resolve();
-                        };
-                    });
-                }
-                video.style.display = 'none';
-                overlay.style.visibility = 'hidden';
-            }
+			function extractAudio(file) {
+				const reader = new FileReader();
+				reader.readAsArrayBuffer(file);
+				reader.onload = async () => {
+					audioContext = new (window.AudioContext || window.webkitAudioContext)();
+					audioBuffer = await audioContext.decodeAudioData(reader.result);
+				};
+			}
 
-            captureAllFrames();
-        }
+			function playScrubbedAudio(time) {
+				if (audioContext && audioBuffer) {
+					if (audioSource) {
+						audioSource.stop();
+					}
+					audioSource = audioContext.createBufferSource();
+					audioSource.buffer = audioBuffer;
+					audioSource.connect(audioContext.destination);
+					audioSource.start(0, time, 0.015); // Play only 15ms
+				}
+			}
 
-        function extractAudio(file) {
-            const reader = new FileReader();
-            reader.readAsArrayBuffer(file);
-            reader.onload = async () => {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                audioBuffer = await audioContext.decodeAudioData(reader.result);
-            };
-        }
+			function stopScrubbedAudio() {
+				if (audioSource) {
+					audioSource.stop();
+					audioSource = null;
+				}
+			}
 
-        function playScrubbedAudio(time) {
-            if (audioContext && audioBuffer) {
-                if (audioSource) {
-                    audioSource.stop();
-                }
-                audioSource = audioContext.createBufferSource();
-                audioSource.buffer = audioBuffer;
-                audioSource.connect(audioContext.destination);
-                audioSource.start(0, time, 0.015); // Play only 15ms
-            }
-        }
+			function handleScrub(event) {
+				if (!isScrubbing) return;
+				const rect = scrubber.getBoundingClientRect();
+				const percent = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+				targetTime = Math.floor(percent * frames.length);
+				if (frames[targetTime]) {
+					let img = new Image();
+					img.src = frames[targetTime];
+					img.onload = () => {
+						ctx.clearRect(0, 0, canvas.width, canvas.height);
+						ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+					};
+					playScrubbedAudio(targetTime / window.frameRate);
+				}
+			}
 
-        function stopScrubbedAudio() {
-            if (audioSource) {
-                audioSource.stop();
-                audioSource = null;
-            }
-        }
+			function startScrubbing(event) {
+				isScrubbing = true;
+			}
 
-        function handleScrub(event) {
-            if (!isScrubbing) return;
-            const rect = scrubber.getBoundingClientRect();
-            const percent = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
-            targetTime = Math.floor(percent * frames.length);
-            if (frames[targetTime]) {
-                let img = new Image();
-                img.src = frames[targetTime];
-                img.onload = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                };
-                playScrubbedAudio(targetTime / frameRate);
-            }
-        }
+			function stopScrubbing() {
+				isScrubbing = false;
+				stopScrubbedAudio();
+			}
 
-        function startScrubbing(event) {
-            isScrubbing = true;
-        }
-
-        function stopScrubbing() {
-            isScrubbing = false;
-            stopScrubbedAudio();
-        }
-
-        scrubber.addEventListener('mousedown', (event) => startScrubbing(event));
-        document.addEventListener('mousemove', (event) => handleScrub(event));
-        document.addEventListener('mouseup', stopScrubbing);
-        
-        scrubber.addEventListener('touchstart', (event) => startScrubbing(event.touches[0]));
-        document.addEventListener('touchmove', (event) => handleScrub(event.touches[0]));
-        document.addEventListener('touchend', stopScrubbing);
+			scrubber.addEventListener('mousedown', (event) => startScrubbing(event));
+			document.addEventListener('mousemove', (event) => handleScrub(event));
+			document.addEventListener('mouseup', stopScrubbing);
+			
+			scrubber.addEventListener('touchstart', (event) => startScrubbing(event.touches[0]));
+			document.addEventListener('touchmove', (event) => handleScrub(event.touches[0]));
+			document.addEventListener('touchend', stopScrubbing);
+		});
     </script>
 </body>
 </html>
