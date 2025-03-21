@@ -11,9 +11,74 @@ let targetTime = 0;
 
 window.frameRate = 30; // Set default to 30FPS
 
+// User Playback Related
+let recordedFrames = [];
+let recordingState = false;
+let recordingPlaying = false;
+
 let frames = [];
+let lastFrameIDX = 0;
 let audioContext, audioBuffer, audioSource;
-    
+
+function ToggleRecordState()
+{
+    if (!frames) return;
+
+    recordingState = !recordingState;
+
+    // TODO: Improve the logic to update, or reinvent it please!
+    document.querySelector("#recordState").innerText = recordingState ? "[STOP RECORDING]" : "[Record Scrub]";
+
+    if (recordingState)
+    {
+        if (recordedFrames.length > 0)
+        {
+            recordedFrames = []
+        }
+    }
+    else
+    {
+        PlayBackRecording();
+    }
+}
+
+function PlayBackRecording()
+{
+    try {
+        recordingPlaying = true;
+        document.querySelector("#recordState").innerText = "[PLAYING RECORDING]";
+        let idx = 0;
+        const cap = recordedFrames.length;
+        if (cap === 0) return;
+
+        const startTime = performance.now();
+        const startFrameTime = recordedFrames[0][1]; // First frame's recorded timestamp
+
+        function _nextF(timestamp) {
+            if (idx >= cap) return; // Stop when all frames are played
+
+            // Compute playback time relative to the first recorded frame
+            const playbackElapsed = timestamp - startTime; // Time since playback started
+            const targetTime = startFrameTime + playbackElapsed;
+
+            // Render all frames that should have been displayed by now
+            while (idx < cap && recordedFrames[idx][1] <= targetTime) {
+                RenderFrameWithAudio(recordedFrames[idx][0]); // Play frame by index
+                idx++;
+            }
+
+            if (idx < cap) requestAnimationFrame(_nextF); // Continue playback
+        }
+
+        requestAnimationFrame(_nextF); // Start the loop
+    } 
+    /* TODO: catch (error) {} */
+    finally {
+        recordingPlaying = false;
+        // TODO: Handle when recording is finished (i.e "[PLAYING RECORDING]") - what if error?
+    }
+}
+
 videoInput.addEventListener('change', function(event) {
     const file = event.target.files[0];
     beginScrubProcess(file);
@@ -29,6 +94,13 @@ window.ResetToMainMenu = function() {
     }
     window.CurrentVideoTitle = "";
     videoContainer.style.display = 'none';
+
+    // Reset User Data
+    recordedFrames = [];
+    audioTimestamps = [];
+    lastFrameIDX = 0;
+    recordingState = false;
+
     document.querySelector("#videoReset").style.visibility = "hidden";
     document.querySelector("#videoName").innerText = "Buffering Video... Please Wait";
     document.querySelector("#MainMenu").style.display = 'flex';
@@ -118,23 +190,39 @@ function stopScrubbedAudio() {
     }
 }
 
+function RenderFrameWithAudio(frameIDX)
+{
+    if (isNaN(frameIDX)) return;
+
+    const audioNum = frameIDX / window.frameRate;
+    let img = new Image();
+    img.src = frames[frameIDX];
+    img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    playScrubbedAudio(audioNum);
+    
+    // TODO: Validate Index against Frames! I believe we already heave targetTime available?!?!
+    lastFrameIDX = frameIDX;
+}
+
+// TODO: Expand with more checks
+function RecordCurrentFrame() {recordedFrames.push([lastFrameIDX, performance.now()]);}
+
 function handleScrub(event) {
-    if (!isScrubbing) return;
+    if (!isScrubbing || recordingPlaying) return;
     const rect = scrubber.getBoundingClientRect();
     const percent = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
     targetTime = Math.floor(percent * frames.length);
     if (frames[targetTime]) {
-        let img = new Image();
-        img.src = frames[targetTime];
-        img.onload = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        };
-        playScrubbedAudio(targetTime / window.frameRate);
+        RenderFrameWithAudio(targetTime);
+        if(recordingState) RecordCurrentFrame();
     }
 }
 
 function startScrubbing(event) {
+    event.preventDefault();
     isScrubbing = true;
 }
 
