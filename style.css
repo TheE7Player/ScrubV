@@ -23,7 +23,6 @@ body {
 canvas {
     display: block;
     background: black;
-    max-width: 100%;
     height: 90vh;
 }
 
@@ -142,3 +141,13 @@ button[data-selected='true'] {
     top: 0;
     height: 30px;
 }
+
+a.icontext {
+    cursor: pointer;
+    display: inline-flex;
+    flex-wrap: nowrap;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.icontext svg { margin: 0px 8px; }
