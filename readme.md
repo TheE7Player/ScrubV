@@ -8,6 +8,8 @@
 
 You can run this on any browser offline, just download the files from this project - and click on the `index.html` - and you're good to go!
 
+Or visit the GitHub Page [here](https://thee7player.github.io/ScrubV/)!
+
 > Please ensure it is a video the browser can support, like an mp4 file.
 
 --- 
