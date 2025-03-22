@@ -20,13 +20,13 @@ videoInput.addEventListener('change', function(event) {
     beginScrubProcess(file);
 });
 
+// TODO: Make each file have its own reset event, and make it a event trigger?
 window.ResetToMainMenu = function() {
     frames = [];			
     stopScrubbedAudio();
     if (audioContext) {
         audioContext.close();
         audioContext = null;
-        
     }
     window.CurrentVideoTitle = "";
     videoContainer.style.display = 'none';
@@ -37,8 +37,9 @@ window.ResetToMainMenu = function() {
     lastFrameIDX = 0;
     recordingState = false;
 
-    document.querySelector("#videoReset").style.visibility = "hidden";
-    document.querySelector("#videoName").innerText = "Buffering Video... Please Wait";
+    ShowExtraControls(false);
+    UpdateBufferTitle("Buffering Video... Please Wait", true);
+
     document.querySelector("#MainMenu").style.display = 'flex';
 };
 
@@ -49,7 +50,6 @@ window.beginScrubProcess = function (file)
         window.CurrentVideoTitle = file.name;
         console.log(`[beginScrubProcess] Processing file: ${file.name}`)
 
-        // document.querySelector(".file-drag-drop").style.display = 'none';
         document.querySelector("#MainMenu").style.display = 'none';
         document.querySelector(".file-drag-drop").classList.remove('highlight');
     
@@ -70,10 +70,43 @@ window.beginScrubProcess = function (file)
     }
 }
 
+function ShowExtraControls(state)
+{
+    // [NOTE]: UI is set to "display:none; visibility:hidden" by default
+    const element = document.querySelector("#videoReset");
+
+    if (state)
+    {
+        element.style.visibility = "visible";
+        element.style.display = "revert";
+    }
+    else
+    {
+        element.style.visibility = "hidden";
+        element.style.display = "none";
+    }
+}
+
+function UpdateBufferTitle(title, buffering)
+{
+    const element = document.querySelector("#videoName");
+    element.innerText = title;
+    element.style.marginRight = buffering ? "0px" : "35px";
+}
+
+function FixBufferOverlayOverCanvas()
+{
+    // Set the actual Canvas width and height with the overlay
+    overlay.style.width = `${canvas.clientWidth + 1}px`;
+    overlay.style.height = `${canvas.clientHeight + 1}px`;
+}
+
 function extractFrames() {
-    overlay.style.visibility = 'visible';
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    FixBufferOverlayOverCanvas();
+    overlay.style.visibility = 'visible';
+    
     let duration = video.duration;
     let totalFrames = Math.floor(duration * window.frameRate);
     frames = new Array(totalFrames);
@@ -89,10 +122,13 @@ function extractFrames() {
                 };
             });
         }
+
         video.style.display = 'none';
+        
         overlay.style.visibility = 'hidden';
-        document.querySelector("#videoName").innerText = window.CurrentVideoTitle;
-        document.querySelector("#videoReset").style.visibility = "visible";
+
+        UpdateBufferTitle(window.CurrentVideoTitle, false);
+        ShowExtraControls(true);
     }
 
     captureAllFrames();
