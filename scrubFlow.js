@@ -31,6 +31,8 @@ window.ResetToMainMenu = function() {
     window.CurrentVideoTitle = "";
     videoContainer.style.display = 'none';
 
+    videoInput.value = null;
+
     // Reset User Data
     recordedFrames = [];
     audioTimestamps = [];
@@ -72,17 +74,15 @@ window.beginScrubProcess = function (file)
 
 function ShowExtraControls(state)
 {
-    // [NOTE]: UI is set to "display:none; visibility:hidden" by default
+    // [NOTE]: UI is set to "display:none" by default
     const element = document.querySelector("#videoReset");
 
     if (state)
     {
-        element.style.visibility = "visible";
         element.style.display = "revert";
     }
     else
     {
-        element.style.visibility = "hidden";
         element.style.display = "none";
     }
 }
@@ -105,7 +105,7 @@ function extractFrames() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     FixBufferOverlayOverCanvas();
-    overlay.style.visibility = 'visible';
+    overlay.style.display = 'flex';
     
     let duration = video.duration;
     let totalFrames = Math.floor(duration * window.frameRate);
@@ -124,8 +124,7 @@ function extractFrames() {
         }
 
         video.style.display = 'none';
-        
-        overlay.style.visibility = 'hidden';
+        overlay.style.display = 'none';
 
         UpdateBufferTitle(window.CurrentVideoTitle, false);
         ShowExtraControls(true);
