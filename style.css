@@ -1,5 +1,6 @@
 :root {
     --video-offset: 40px;
+    --primary: #7c49b5;
 }
 
 body {
@@ -75,7 +76,7 @@ button {
 }
 
 button[data-selected='true'] {
-    background-color: #7c49b5;
+    background-color: var(--primary);
     color: white;
 }
 
@@ -156,3 +157,11 @@ a.icontext {
 }
 
 .icontext svg { margin: 0px 8px; }
+
+.dev-badge {
+    background-color: var(--primary);
+    color: white;
+    padding: 4px 8px;
+    text-align: center;
+    border-radius: 5px;
+}
