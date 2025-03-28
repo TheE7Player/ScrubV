@@ -113,15 +113,19 @@ function extractFrames() {
 
     async function captureAllFrames() {
         const processStart = new Date().getTime();
+
+        // Utilise OffscreenCanvas array to avoid Image URLS (previously, .toDataUrl())
         for (let i = 0; i < totalFrames; i++) {
-            await(new Promise((resolve) => {
+            await new Promise((resolve) => {
                 video.currentTime = i / window.frameRate;
-                requestAnimationFrame(() => {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    frames[i] = canvas.toDataURL();
+                video.onseeked = () => {
+                    let offscreen = new OffscreenCanvas(canvas.width, canvas.height);
+                    let ctxOff = offscreen.getContext('2d');
+                    ctxOff.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    frames[i] = offscreen;
                     resolve();
-                });
-            }));
+                };
+            });
         }
     
         video.style.display = 'none';
@@ -176,14 +180,14 @@ function RenderFrameWithAudio(frameIDX)
     if (isNaN(frameIDX)) return;
 
     const audioNum = frameIDX / window.frameRate;
-    let img = new Image();
-    img.src = frames[frameIDX];
-    img.onload = () => {
+    let frame = frames[frameIDX];
+
+    if (frame instanceof OffscreenCanvas) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    };
+        ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+    }
     playScrubbedAudio(audioNum);
-    
+
     // TODO: Validate Index against Frames! I believe we already heave targetTime available?!?!
     lastFrameIDX = frameIDX;
 }
