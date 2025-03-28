@@ -112,22 +112,24 @@ function extractFrames() {
     frames = new Array(totalFrames);
 
     async function captureAllFrames() {
+        const processStart = new Date().getTime();
         for (let i = 0; i < totalFrames; i++) {
-            await new Promise((resolve) => {
-                video.currentTime = (i / window.frameRate);
-                video.onseeked = () => {
+            await(new Promise((resolve) => {
+                video.currentTime = i / window.frameRate;
+                requestAnimationFrame(() => {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     frames[i] = canvas.toDataURL();
                     resolve();
-                };
-            });
+                });
+            }));
         }
-
+    
         video.style.display = 'none';
         overlay.style.display = 'none';
 
         UpdateBufferTitle(window.CurrentVideoTitle, false);
         ShowExtraControls(true);
+        console.log(`[captureAllFrames] Processing took: ${new Date().getTime() - processStart}ms`)
     }
 
     captureAllFrames();
@@ -142,16 +144,24 @@ function extractAudio(file) {
     };
 }
 
+const AudioBuffer = 0.015; // Play only 15ms
 function playScrubbedAudio(time) {
-    if (audioContext && audioBuffer) {
-        if (audioSource) {
-            audioSource.stop();
-        }
-        audioSource = audioContext.createBufferSource();
-        audioSource.buffer = audioBuffer;
-        audioSource.connect(audioContext.destination);
-        audioSource.start(0, time, 0.015); // Play only 15ms
+    // Introduce Audio Segment buffering to reduce CPU usage (unnecessary reallocations)
+    if (!audioContext || !audioBuffer) return;
+
+    if (audioSource) {
+        audioSource.stop();
+        audioSource = null;
     }
+    
+    // New Approach: Slice the buffer, instead of creating a brand AudioBufferSourceNode each time
+    let startOffset = Math.min(time, audioBuffer.duration - 0.015);
+    let segmentLength = Math.min(0.015, audioBuffer.duration - startOffset);
+
+    audioSource = audioContext.createBufferSource();
+    audioSource.buffer = audioBuffer;
+    audioSource.connect(audioContext.destination);
+    audioSource.start(0, startOffset, segmentLength);
 }
 
 function stopScrubbedAudio() {
