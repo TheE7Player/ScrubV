@@ -2,8 +2,8 @@
 // Source: https://stackoverflow.com/a/6756680
 
 // Global Events Hooking (To prevent unnecessary behaviours)
-window.addEventListener("dragover",function(e){e = e || event;e.preventDefault();},false);
-window.addEventListener("drop",function(e){e = e || event;e.preventDefault();},false);
+window.addEventListener("dragover",function(e){e.preventDefault();},false);
+window.addEventListener("drop",function(e){e.preventDefault();},false);
 
 // Drag and Drop Related Functionality
 document.querySelector('.file-drag-drop').addEventListener('dragover', function(event) {

@@ -15,26 +15,24 @@ let frames = [];
 let lastFrameIDX = 0;
 let audioContext, audioBuffer, audioSource;
 
-videoInput.addEventListener('change', function(event) {
+function videoInputChange(event)
+{
     const file = event.target.files[0];
     beginScrubProcess(file);
-});
+}
+videoInput.addEventListener('change', videoInputChange);
 
 // TODO: Make each file have its own reset event, and make it a event trigger?
 window.ResetToMainMenu = function() {
-    frames = [];			
+    frames.length = 0;
     stopScrubbedAudio();
-    if (audioContext) {
-        audioContext.close();
-        audioContext = null;
-    }
     window.CurrentVideoTitle = "";
     videoContainer.style.display = 'none';
 
-    videoInput.value = null;
+    videoInput.value = "";
 
     // Reset User Data
-    recordedFrames = [];
+    recordedFrames.length = 0;
     audioTimestamps = [];
     lastFrameIDX = 0;
     recordingState = false;
@@ -56,12 +54,7 @@ window.beginScrubProcess = function (file)
         document.querySelector(".file-drag-drop").classList.remove('highlight');
     
         frames = [];
-        
         stopScrubbedAudio();
-        if (audioContext) {
-            audioContext.close();
-            audioContext = null;
-        }
         
         const url = URL.createObjectURL(file);
         video.src = url;
@@ -72,26 +65,25 @@ window.beginScrubProcess = function (file)
     }
 }
 
+// [NOTE]: UI is set to "display:none" by default
+const videoReset = document.querySelector("#videoReset");
 function ShowExtraControls(state)
 {
-    // [NOTE]: UI is set to "display:none" by default
-    const element = document.querySelector("#videoReset");
-
     if (state)
     {
-        element.style.display = "revert";
+        videoReset.style.display = "revert";
     }
     else
     {
-        element.style.display = "none";
+        videoReset.style.display = "none";
     }
 }
 
+const videoName = document.querySelector("#videoName");
 function UpdateBufferTitle(title, buffering)
 {
-    const element = document.querySelector("#videoName");
-    element.innerText = title;
-    element.style.marginRight = buffering ? "0px" : "35px";
+    videoName.innerText = title;
+    videoName.style.marginRight = buffering ? "0px" : "35px";
 }
 
 function FixBufferOverlayOverCanvas()
@@ -122,6 +114,7 @@ function extractFrames() {
                     let offscreen = new OffscreenCanvas(canvas.width, canvas.height);
                     let ctxOff = offscreen.getContext('2d');
                     ctxOff.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     frames[i] = offscreen;
                     resolve();
                 };
@@ -148,19 +141,16 @@ function extractAudio(file) {
     };
 }
 
-const AudioBuffer = 0.015; // Play only 15ms
+const Audio_Buffer = 0.015; // Play only 15ms
 function playScrubbedAudio(time) {
     // Introduce Audio Segment buffering to reduce CPU usage (unnecessary reallocations)
     if (!audioContext || !audioBuffer) return;
 
-    if (audioSource) {
-        audioSource.stop();
-        audioSource = null;
-    }
+    stopScrubbedAudio();
     
     // New Approach: Slice the buffer, instead of creating a brand AudioBufferSourceNode each time
-    let startOffset = Math.min(time, audioBuffer.duration - 0.015);
-    let segmentLength = Math.min(0.015, audioBuffer.duration - startOffset);
+    let startOffset = Math.min(time, audioBuffer.duration - Audio_Buffer);
+    let segmentLength = Math.min(Audio_Buffer, audioBuffer.duration - startOffset);
 
     audioSource = audioContext.createBufferSource();
     audioSource.buffer = audioBuffer;
@@ -175,18 +165,13 @@ function stopScrubbedAudio() {
     }
 }
 
-function RenderFrameWithAudio(frameIDX)
+function RenderFrameWithAudio(frameIDX, renderFrameOnly = false)
 {
     if (isNaN(frameIDX)) return;
 
-    const audioNum = frameIDX / window.frameRate;
-    let frame = frames[frameIDX];
-
-    if (frame instanceof OffscreenCanvas) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-    }
-    playScrubbedAudio(audioNum);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(frames[frameIDX], 0, 0, canvas.width, canvas.height);
+    if(!renderFrameOnly) playScrubbedAudio(frameIDX / window.frameRate);
 
     // TODO: Validate Index against Frames! I believe we already heave targetTime available?!?!
     lastFrameIDX = frameIDX;
@@ -214,9 +199,10 @@ function stopScrubbing() {
 }
 
 scrubber.addEventListener('mousedown', (event) => startScrubbing(event));
-document.addEventListener('mousemove', (event) => handleScrub(event));
-document.addEventListener('mouseup', stopScrubbing);
-
 scrubber.addEventListener('touchstart', (event) => startScrubbing(event.touches[0]));
+
+document.addEventListener('mousemove', (event) => handleScrub(event));
 document.addEventListener('touchmove', (event) => handleScrub(event.touches[0]));
+
+document.addEventListener('mouseup', stopScrubbing);
 document.addEventListener('touchend', stopScrubbing);

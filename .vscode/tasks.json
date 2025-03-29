@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Chrome",
+            "type": "shell",
+            "command": "cmd.exe /c start chrome --incognito \"${workspaceFolder}/index.html\"",
+            "isBackground": true,
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
