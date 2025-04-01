@@ -93,29 +93,38 @@ function FixBufferOverlayOverCanvas()
     overlay.style.height = `${canvas.clientHeight + 1}px`;
 }
 
-function extractFrames() {
+function msTimeDiff(from, now = new Date().getTime())
+{
+    return now - from;
+}
+
+async function extractFrames() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     FixBufferOverlayOverCanvas();
     overlay.style.display = 'flex';
     
-    let duration = video.duration;
-    let totalFrames = Math.floor(duration * window.frameRate);
+    const totalFrames = Math.floor(video.duration * window.frameRate);
     frames = new Array(totalFrames);
 
     async function captureAllFrames() {
         const processStart = new Date().getTime();
-
+           
         // Utilise OffscreenCanvas array to avoid Image URLS (previously, .toDataUrl())
         for (let i = 0; i < totalFrames; i++) {
             await new Promise((resolve) => {
                 video.currentTime = i / window.frameRate;
                 video.onseeked = () => {
                     let offscreen = new OffscreenCanvas(canvas.width, canvas.height);
+                   
                     let ctxOff = offscreen.getContext('2d');
+                   
                     ctxOff.drawImage(video, 0, 0, canvas.width, canvas.height);
+                   
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
                     frames[i] = offscreen;
+                    
                     resolve();
                 };
             });
@@ -126,7 +135,7 @@ function extractFrames() {
 
         UpdateBufferTitle(window.CurrentVideoTitle, false);
         ShowExtraControls(true);
-        console.log(`[captureAllFrames] Processing took: ${new Date().getTime() - processStart}ms`)
+        console.log(`[captureAllFrames] Processing took: ${msTimeDiff(processStart)}ms`)
     }
 
     captureAllFrames();
