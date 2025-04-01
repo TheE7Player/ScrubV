@@ -29,6 +29,7 @@ canvas {
     display: block;
     background: black;
     height: 90vh;
+    height: 90dvh;
     margin-top: var(--video-offset);
 }
 
@@ -55,7 +56,7 @@ canvas {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 24px;
+    font-size: 1rem;
 }
 
 .button-container {
@@ -67,7 +68,7 @@ canvas {
 
 button {
     padding: 4px 12px;
-    font-size: 18px;
+    font-size: 1.125rem;
     cursor: pointer;
     border: none;
     background-color: #3b3a3a;
@@ -95,7 +96,7 @@ button[data-selected='true'] {
 .file-overlay {
     transition: opacity 0.9s, transform 0.3s;
     color: #535353;
-    font-size: 16px;
+    font-size: 1rem;
     text-align: center;
 }
 
