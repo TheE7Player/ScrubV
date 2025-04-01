@@ -7,17 +7,19 @@ body {
     background-color: rgba(28, 28, 30, 255);
     text-align: center;
     font-family: Arial, sans-serif;
-    overflow: auto;
+    overflow: hidden;
     color: white;
     height: 100vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    margin: 0px 8px;
 }
 
 #videoContainer {
     width: 90vw;
+    width: 90dvw;
     max-width: 600px;
     position: relative;
     display: flex;
@@ -28,8 +30,8 @@ body {
 canvas {
     display: block;
     background: black;
-    height: 90vh;
-    height: 90dvh;
+    height: 88vh;
+    height: 88dvh;
     margin-top: var(--video-offset);
 }
 
