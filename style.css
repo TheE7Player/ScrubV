@@ -1,6 +1,9 @@
 :root {
     --video-offset: 40px;
     --primary: #7c49b5;
+    --gold: #e8ff70;
+    --goldGradStart: #ddef81;
+    --goldGradEnd: #ecff8d;
 }
 
 body {
@@ -46,6 +49,18 @@ canvas {
     margin-top: 10px;
 }
 
+#scrubber-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background: linear-gradient(to right, var(--goldGradStart), var(--goldGradEnd));
+    border-radius: 10px;
+    box-shadow: 0 0 10px 3px rgb(255 255 255 / 20%); /* Glowing effect */
+    transition: width 0.2s ease;
+}
+
 #frameRateSelect {
     margin-bottom: 10px;
 }
@@ -87,7 +102,7 @@ button[data-selected='true'] {
     width: 400px;
     height: 250px;
     margin-top: 25px;
-    border: 1px solid #e8ff70;
+    border: 1px solid var(--gold);
     display: flex;
     justify-content: center;
     align-items: center;
