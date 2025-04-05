@@ -99,10 +99,12 @@ function msTimeDiff(from, now = new Date().getTime())
 }
 
 function extractFrames() {
+function extractFrames() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     FixBufferOverlayOverCanvas();
     overlay.style.display = 'flex';
+
 
     const totalFrames = Math.floor(video.duration * window.frameRate);
     frames = new Array(totalFrames);
@@ -144,6 +146,39 @@ function extractFrames() {
 
             scrubberProcess.style.width = `${(frameIndex / totalFrames) * 100}%`
 
+            captureFrame(); // Schedule the next frame
+        });
+    }
+
+    captureFrame(); // Start the process
+    let frameIndex = 0;
+    let processStart = new Date().getTime();
+
+    function captureFrame() {
+        if (frameIndex >= totalFrames) {
+            video.style.display = 'none';
+            overlay.style.display = 'none';
+            UpdateBufferTitle(window.CurrentVideoTitle, false);
+            ShowExtraControls(true);
+            console.log(`[captureAllFrames] Processing took: ${msTimeDiff(processStart)}ms`)
+            return;
+        }
+
+        video.currentTime = frameIndex / window.frameRate;
+
+        // Avoids blocking of main thread, when buffering frames
+        video.requestVideoFrameCallback( () => {
+            let offscreen = new OffscreenCanvas(canvas.width, canvas.height);
+            let ctxOff = offscreen.getContext('2d');
+            ctxOff.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Only draw to visible canvas on the *first* frame (or another suitable trigger)
+            if (frameIndex === 0) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            }
+
+            frames[frameIndex] = offscreen;
+            frameIndex++;
             captureFrame(); // Schedule the next frame
         });
     }
