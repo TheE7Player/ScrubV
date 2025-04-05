@@ -98,47 +98,48 @@ function msTimeDiff(from, now = new Date().getTime())
     return now - from;
 }
 
-async function extractFrames() {
+function extractFrames() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     FixBufferOverlayOverCanvas();
     overlay.style.display = 'flex';
-    
+
     const totalFrames = Math.floor(video.duration * window.frameRate);
     frames = new Array(totalFrames);
 
-    async function captureAllFrames() {
-        const processStart = new Date().getTime();
-           
-        // Utilise OffscreenCanvas array to avoid Image URLS (previously, .toDataUrl())
-        for (let i = 0; i < totalFrames; i++) {
-            await new Promise((resolve) => {
-                video.currentTime = i / window.frameRate;
-                video.onseeked = () => {
-                    let offscreen = new OffscreenCanvas(canvas.width, canvas.height);
-                   
-                    let ctxOff = offscreen.getContext('2d');
-                   
-                    ctxOff.drawImage(video, 0, 0, canvas.width, canvas.height);
-                   
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    let frameIndex = 0;
+    let processStart = new Date().getTime();
 
-                    frames[i] = offscreen;
-                    
-                    resolve();
-                };
-            });
+    function captureFrame() {
+        if (frameIndex >= totalFrames) {
+            video.style.display = 'none';
+            overlay.style.display = 'none';
+            UpdateBufferTitle(window.CurrentVideoTitle, false);
+            ShowExtraControls(true);
+            console.log(`[captureAllFrames] Processing took: ${msTimeDiff(processStart)}ms`)
+            return;
         }
-    
-        video.style.display = 'none';
-        overlay.style.display = 'none';
 
-        UpdateBufferTitle(window.CurrentVideoTitle, false);
-        ShowExtraControls(true);
-        console.log(`[captureAllFrames] Processing took: ${msTimeDiff(processStart)}ms`)
+        video.currentTime = frameIndex / window.frameRate;
+
+        // Avoids blocking of main thread, when buffering frames
+        video.requestVideoFrameCallback( () => {
+            let offscreen = new OffscreenCanvas(canvas.width, canvas.height);
+            let ctxOff = offscreen.getContext('2d');
+            ctxOff.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Only draw to visible canvas on the *first* frame (or another suitable trigger)
+            if (frameIndex === 0) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            }
+
+            frames[frameIndex] = offscreen;
+            frameIndex++;
+            captureFrame(); // Schedule the next frame
+        });
     }
 
-    captureAllFrames();
+    captureFrame(); // Start the process
 }
 
 function extractAudio(file) {

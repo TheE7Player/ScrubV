@@ -5,17 +5,19 @@
 window.addEventListener("dragover",function(e){e.preventDefault();},false);
 window.addEventListener("drop",function(e){e.preventDefault();},false);
 
+const fileDragDrop = document.querySelector('.file-drag-drop');
+
 // Drag and Drop Related Functionality
-document.querySelector('.file-drag-drop').addEventListener('dragover', function(event) {
+fileDragDrop.addEventListener('dragover', function(event) {
     event.preventDefault();
     this.classList.add('highlight');
 });
 
-document.querySelector('.file-drag-drop').addEventListener('dragleave', function() {
+fileDragDrop.addEventListener('dragleave', function() {
     this.classList.remove('highlight');
 });
 
-document.querySelector('.file-drag-drop').addEventListener('drop', function(event) {
+fileDragDrop.addEventListener('drop', function(event) {
     event.preventDefault();
 
     // TODO: Basic for now, to improve later.
@@ -25,7 +27,7 @@ document.querySelector('.file-drag-drop').addEventListener('drop', function(even
         alert("Ideally this file (a video) should be a MP4 extension...");
 
         // Programmatically, invoke "dragleave" event for file drop - to allow glow effect to take place again without it being locked.
-        document.querySelector('.file-drag-drop').dispatchEvent(new Event('dragleave'));
+        fileDragDrop.dispatchEvent(new Event('dragleave'));
         
         return;
     }
@@ -33,20 +35,31 @@ document.querySelector('.file-drag-drop').addEventListener('drop', function(even
     beginScrubProcess(event.dataTransfer.files[0]);
 });
 
+function handle(fps, fpsTarget, element)
+{
+    if (fps !== fpsTarget)
+    {
+        element.setAttribute('data-selected', 'false'); return;
+    }
+    window.frameRate = fpsTarget;
+    element.setAttribute('data-selected', 'true')
+}
+
+const fpsOptions = [
+    { fps: 15, elementId: "btn15" },
+    { fps: 30, elementId: "btn30" },
+    { fps: 60, elementId: "btn60" },
+]
+
 // UI logic
 window.HandleFPSRate = function(fps)
 {
-    function handle(fpsTarget, element)
-    {
-        if (fps !== fpsTarget)
-        {
-            element.setAttribute('data-selected', 'false'); return;
+    for (const option of fpsOptions) {
+        const element = document.getElementById(option.elementId);
+        if (element) { //Check if element exists
+             handleFPSButton(fps, option.fps, element);
+        } else {
+            console.warn(`Element with ID ${option.elementId} not found.`); //Helpful for debugging
         }
-        window.frameRate = fpsTarget;
-        element.setAttribute('data-selected', 'true')
     }
-    
-    handle(15, document.getElementById("btn15"));
-    handle(30, document.getElementById("btn30"));
-    handle(60, document.getElementById("btn60"));
 }
