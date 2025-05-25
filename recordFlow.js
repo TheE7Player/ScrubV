@@ -59,7 +59,7 @@ function PlayBackRecording()
         const targetTime = startFrameTime + playbackElapsed;
 
         while (idx < cap && recordedFrames[idx][1] <= targetTime) {
-            RenderFrameWithAudio(recordedFrames[idx][0]); 
+            RenderFrame(recordedFrames[idx][0]); 
             idx++;
         }
 

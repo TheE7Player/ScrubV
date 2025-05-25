@@ -13,7 +13,6 @@ window.frameRate = 30; // Set default to 30FPS
 
 let frames = [];
 let lastFrameIDX = 0;
-let audioContext, audioBuffer, audioSource;
 
 function videoInputChange(event)
 {
@@ -25,19 +24,26 @@ videoInput.addEventListener('change', videoInputChange);
 // TODO: Make each file have its own reset event, and make it a event trigger?
 window.ResetToMainMenu = function() {
     frames.length = 0;
-    stopScrubbedAudio();
+    
+    resetAudio();
+    
     window.CurrentVideoTitle = "";
+    
     videoContainer.style.display = 'none';
 
     videoInput.value = "";
 
     // Reset User Data
     recordedFrames.length = 0;
-    audioTimestamps = [];
+    
+    // audioTimestamps = [];
+    
     lastFrameIDX = 0;
+    
     recordingState = false;
 
     ShowExtraControls(false);
+
     UpdateBufferTitle("Buffering Video... Please Wait", true);
 
     document.querySelector("#MainMenu").style.display = 'flex';
@@ -104,7 +110,6 @@ function extractFrames() {
     FixBufferOverlayOverCanvas();
     overlay.style.display = 'flex';
 
-
     const totalFrames = Math.floor(video.duration * window.frameRate);
     frames = new Array(totalFrames);
 
@@ -122,7 +127,6 @@ function extractFrames() {
             UpdateBufferTitle(window.CurrentVideoTitle, false);
             ShowExtraControls(true);
             scrubberProcess.remove();
-            //scrubber.removeChild(scrubberProcess);
             console.log(`[captureAllFrames] Processing took: ${msTimeDiff(processStart)}ms`)
             return;
         }
@@ -139,73 +143,40 @@ function extractFrames() {
             if (frameIndex === 0) {
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             }
-
+            scrubberProcess.style.width = `${(frameIndex / totalFrames) * 100}%`
             frames[frameIndex] = offscreen;
             frameIndex++;
-
-            scrubberProcess.style.width = `${(frameIndex / totalFrames) * 100}%`
-
             captureFrame(); // Schedule the next frame
         });
     }
-    captureFrame()
+
+    captureFrame(); // Start the process
 }
 
-function extractAudio(file) {
-    // TODO: Take into consideration, that a video may not have an audio stream!
-    // EncodingError: Unable to decode audio data
-    const reader = new FileReader();
-    reader.readAsArrayBuffer(file);
-    reader.onload = async () => {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        audioBuffer = await audioContext.decodeAudioData(reader.result);
-    };
-}
-
-const Audio_Buffer = 0.015; // Play only 15ms
-function playScrubbedAudio(time) {
-    // Introduce Audio Segment buffering to reduce CPU usage (unnecessary reallocations)
-    if (!audioContext || !audioBuffer) return;
-
-    stopScrubbedAudio();
-    
-    // New Approach: Slice the buffer, instead of creating a brand AudioBufferSourceNode each time
-    let startOffset = Math.min(time, audioBuffer.duration - Audio_Buffer);
-    let segmentLength = Math.min(Audio_Buffer, audioBuffer.duration - startOffset);
-
-    audioSource = audioContext.createBufferSource();
-    audioSource.buffer = audioBuffer;
-    audioSource.connect(audioContext.destination);
-    audioSource.start(0, startOffset, segmentLength);
-}
-
-function stopScrubbedAudio() {
-    if (audioSource) {
-        audioSource.stop();
-        audioSource = null;
-    }
-}
-
-function RenderFrameWithAudio(frameIDX, renderFrameOnly = false)
+function RenderFrame(frameIDX)
 {
     if (isNaN(frameIDX)) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(frames[frameIDX], 0, 0, canvas.width, canvas.height);
-    if(!renderFrameOnly) playScrubbedAudio(frameIDX / window.frameRate);
-
-    // TODO: Validate Index against Frames! I believe we already heave targetTime available?!?!
-    lastFrameIDX = frameIDX;
+    playScrubbedAudio(frameIDX / window.frameRate);
 }
 
 function handleScrub(event) {
     if (!isScrubbing || recordingPlaying) return;
+    
     const rect = scrubber.getBoundingClientRect();
+    
     const percent = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+    
     targetTime = Math.floor(percent * frames.length);
+    
     if (frames[targetTime]) {
-        RenderFrameWithAudio(targetTime);
-        if(recordingState) RecordCurrentFrame();
+        RenderFrame(targetTime);
+        if(recordingState) RecordCurrentFrame();       
+        // TODO: Validate Index against Frames!
+        // TODO: Is this bit actually needed? Review variables and its usages
+        lastFrameIDX = targetTime;
     }
 }
 
