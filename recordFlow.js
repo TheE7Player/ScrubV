@@ -18,6 +18,20 @@ const SVG_Icons = {
     [UI_States.PLAYBACK]: `<path d="m253.377 87.258 110.724 214.6H142.653z" style="stroke:#000;fill:#82cc70;stroke-width:5px;transform-box:fill-box;transform-origin:50% 50%" transform="rotate(90 -26.943 -93.033)"/>`
 };
 
+function resetPlayback(partialReset = false)
+{
+    // Reset array with .length = 0 approach, instead of allocating new array
+    recordedFrames.length = 0;
+    ChangeUIRecordState(UI_States.STOP);
+
+    if(partialReset) return;
+
+    // Change only the state if its a true reset of data
+    recordingState = false;
+    recordingPlaying = false;
+    ChangeUIRecordState(UI_States.START);
+}
+
 function ChangeUIRecordState(State)
 {
     requestIdleCallback(() => {
@@ -32,11 +46,8 @@ function ToggleRecordState()
     recordingState = !recordingState;
 
     if (recordingState)
-    {
-        ChangeUIRecordState(UI_States.STOP);
-        
-        // Reset array with .length = 0 approach, instead of allocating new array
-        recordedFrames.length = 0;
+    {  
+        resetPlayback(true);
     }
     else
     {

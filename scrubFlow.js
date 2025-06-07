@@ -21,33 +21,19 @@ function videoInputChange(event)
 }
 videoInput.addEventListener('change', videoInputChange);
 
-// TODO: Make each file have its own reset event, and make it a event trigger?
-window.ResetToMainMenu = function() {
+function resetScrub() {
     frames.length = 0;
-    
-    resetAudio();
-    
-    window.CurrentVideoTitle = "";
-    
+    window.CurrentVideoTitle = "";  
     videoContainer.style.display = 'none';
-
     videoInput.value = "";
-
     // Reset User Data
     recordedFrames.length = 0;
-    
-    // audioTimestamps = [];
-    
     lastFrameIDX = 0;
-    
     recordingState = false;
-
     ShowExtraControls(false);
-
     UpdateBufferTitle("Buffering Video... Please Wait", true);
-
     document.querySelector("#MainMenu").style.display = 'flex';
-};
+}
 
 window.CurrentVideoTitle = "";
 window.beginScrubProcess = function (file)

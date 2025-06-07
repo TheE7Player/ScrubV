@@ -69,6 +69,8 @@ function resetAudio()
     audioContext = null; // Clear the audio context object
 
     // TODO: Evaluate if this initial deference is viable
+    
+    if(!audioBuffer) return;
     audioBuffer.buffer = null; // Clear the initial audio buffer
     audioBuffer = null; // Clear the audio buffer object
 }
